@@ -43,17 +43,17 @@ throughout.
 
 ## 🖥️ HMI — Vessel Cross-Section & Live Trends
 
-The `hmi/index.html` mockup shows a bioreactor vessel cross-section with an
+The `index.html` mockup shows a bioreactor vessel cross-section with an
 animated agitator, a heating/cooling jacket that changes colour with mode, rising
 bubbles when oxygen sparging engages, and live scrolling trend charts for pH,
 dissolved oxygen, and temperature — exactly the operator view a real batch record
 review would reference.
 
-![HMI Dashboard](images/hmi-dashboard.png)
+![HMI Dashboard](hmi-dashboard.png)
 
 ## 🗺️ System Architecture
 
-![Architecture Diagram](images/architecture_diagram.svg)
+![Architecture Diagram](architecture_diagram.svg)
 
 ## ⚙️ Key Engineering Concepts
 
@@ -84,9 +84,9 @@ bioreactor-batch-control/
 
 ## 📄 Documentation
 
-- [I/O List &amp; Recipe Parameters](docs/IO_List.md)
-- [Functional Test Procedures](docs/Testing_Procedures.md)
-- [Full Technical Manual (PDF)](ebook/Bioreactor_Technical_Manual.pdf) — 25-page project ebook covering GMP/ISA-88 industry context, architecture, hardware, the cascade/split-range/F0 control philosophy, full annotated code, HMI design, alarm philosophy, testing/commissioning, and a HAZOP-style hazard register
+- [I/O List &amp; Recipe Parameters](IO_List.md)
+- [Functional Test Procedures](Testing_Procedures.md)
+- [Full Technical Manual (PDF)](Bioreactor_Technical_Manual.pdf) — 25-page project ebook covering GMP/ISA-88 industry context, architecture, hardware, the cascade/split-range/F0 control philosophy, full annotated code, HMI design, alarm philosophy, testing/commissioning, and a HAZOP-style hazard register
 
 ## ⚠️ Disclaimer
 
