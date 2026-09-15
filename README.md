@@ -1,6 +1,12 @@
 # 🧬 Automated Bioreactor Environmental Control Unit
 ### for Pharmaceutical Batch Processing
 
+🧪⚛Live Project
+
+### 🖥️ Interactive HMI
+
+╰┈➤[Launch the AI-Driven HMI](https://hangmanlucky.github.io/ai-vision-sorting/)
+
 ![Platform](https://img.shields.io/badge/PLC-Siemens%20S7--1500%20%2F%20CODESYS-blue)
 ![Language](https://img.shields.io/badge/Language-IEC%2061131--3%20Structured%20Text-informational)
 ![Domain](https://img.shields.io/badge/Domain-Biotech%20%2F%20Pharma%20%2F%20ISA--88-magenta)
