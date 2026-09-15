@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bioreactor Environmental Control &mdash; Batch HMI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A1420; --panel:#0F1D2C; --line:#1E3348;
+    --text-hi:#EAF2FA; --text-mid:#8FA7C0; --text-dim:#4F6480;
+    --bio:#E91E8C; --bio-soft:#F5A8D2; --cyan:#4FD1E8; --safe:#35D0A0; --warn:#F5A623; --trip:#EF4B4B;
+    --mono:'IBM Plex Mono',monospace; --label:'Barlow Semi Condensed',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text-hi);font-family:var(--label);}
+  body{min-height:100vh;padding:18px;background:radial-gradient(1100px 550px at 15% -10%, rgba(233,30,140,0.08), transparent 60%), var(--bg);}
+  .console{max-width:1260px;margin:0 auto;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,0.55);}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;background:#0B1622;border-bottom:1px solid var(--line);}
+  .unit{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--bio-soft);text-transform:uppercase;}
+  h1{font-size:17px;margin:2px 0 2px;letter-spacing:.04em;font-weight:700;text-transform:uppercase;}
+  .sub{font-size:11px;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;}
+  .clock{font-family:var(--mono);font-size:13px;color:var(--text-mid);text-align:right;}
+  .clock span{display:block;color:var(--text-dim);font-size:10px;letter-spacing:.12em;text-transform:uppercase;}
+
+  .statusrow{display:flex;align-items:center;justify-content:space-between;padding:12px 22px;border-bottom:1px solid var(--line);}
+  .pill{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.05em;padding:8px 14px;border-radius:3px;border:1px solid;color:var(--bio);border-color:rgba(233,30,140,.4);background:rgba(233,30,140,.08);}
+  .pill.trip{color:var(--trip);border-color:rgba(239,75,75,.5);background:rgba(239,75,75,.12);}
+  .metabox{font-family:var(--mono);font-size:10.5px;color:var(--text-mid);}
+  .metabox b{color:var(--text-hi);}
+  .metaitem{display:inline-block;margin-left:18px;}
+
+  .phasewrap{display:flex;padding:12px 22px;border-bottom:1px solid var(--line);overflow-x:auto;}
+  .phasechip{font-family:var(--mono);font-size:9.5px;padding:6px 10px;border:1px solid var(--line);border-radius:3px;color:var(--text-dim);margin-right:8px;white-space:nowrap;}
+  .phasechip.done{color:var(--safe);border-color:rgba(53,208,160,.4);}
+  .phasechip.active{color:var(--bio);border-color:var(--bio);background:rgba(233,30,140,.1);}
+
+  .main{display:flex;border-bottom:1px solid var(--line);}
+  .col{padding:16px 20px;border-right:1px solid var(--line);}
+  .col:last-child{border-right:none;}
+  .celltitle{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-dim);margin:0 0 10px;font-weight:600;}
+
+  .probe{font-family:var(--mono);font-size:10.5px;color:var(--text-mid);display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);}
+  .probe b{color:var(--text-hi);font-size:12px;}
+
+  .chartwrap{margin-top:6px;}
+  .chartlbl{font-family:var(--mono);font-size:9.5px;color:var(--text-dim);margin-bottom:2px;}
+
+  .log{display:flex;flex-direction:column;max-height:200px;overflow-y:auto;margin-top:8px;}
+  .log-row{display:flex;padding:6px 0;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9.5px;}
+  .log-row:last-child{border-bottom:none;}
+  .log-time{color:var(--text-dim);flex:none;width:52px;}
+  .log-tag{flex:none;width:6px;height:6px;border-radius:50%;margin:3px 7px 0 0;}
+  .log-tag.ok{background:var(--safe);} .log-tag.trip{background:var(--trip);} .log-tag.warn{background:var(--warn);} .log-tag.info{background:var(--cyan);}
+  .log-msg{color:var(--text-mid);}
+  ::-webkit-scrollbar{width:6px;} ::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
+
+  .footer{padding:12px 22px;font-family:var(--mono);font-size:10px;color:var(--text-dim);border-top:1px solid var(--line);display:flex;justify-content:space-between;}
+</style>
+</head>
+<body>
+<div class="console">
+  <div class="topbar">
+    <div>
+      <div class="unit">BIOREACTOR BR-201 &nbsp;&middot;&nbsp; BATCH #B24-0417</div>
+      <h1>Bioreactor Environmental Control</h1>
+      <div class="sub">CIP &rarr; SIP &rarr; Inoculation &rarr; Incubation &rarr; Harvest</div>
+    </div>
+    <div class="clock"><span>Batch Time</span><span id="clockval">00:00:00</span></div>
+  </div>
+
+  <div class="statusrow">
+    <div class="pill" id="statusPill">STERILISING (SIP)</div>
+    <div class="metabox">
+      <span class="metaitem">F0 <b id="f0Val">0.0</b> / <b id="f0Target">15.0</b> min</span>
+      <span class="metaitem">VESSEL <b id="tempVal">121.0</b>&deg;C</span>
+    </div>
+  </div>
+
+  <div class="phasewrap" id="phaseWrap"></div>
+
+  <div class="main">
+    <div class="col" style="flex:1.1;">
+      <p class="celltitle">Vessel Cross-Section</p>
+      <svg viewBox="0 0 300 300" style="width:100%;max-width:300px;display:block;margin:0 auto;">
+        <rect x="70" y="30" width="160" height="220" rx="14" fill="none" stroke="#1E3348" stroke-width="16" id="jacket"/>
+        <rect x="82" y="42" width="136" height="196" rx="8" fill="#0B1622" stroke="#3a5570" stroke-width="2"/>
+        <clipPath id="liqClip"><rect x="84" y="44" width="132" height="192" rx="7"/></clipPath>
+        <g clip-path="url(#liqClip)">
+          <rect x="84" y="100" width="132" height="140" fill="#1c6f8a" id="liquid"/>
+          <g id="bubbles"></g>
+        </g>
+        <line x1="150" y1="20" x2="150" y2="230" stroke="#cfd8e3" stroke-width="4"/>
+        <g id="impeller1" transform="translate(150,150)">
+          <line x1="-28" y1="0" x2="28" y2="0" stroke="#cfd8e3" stroke-width="5" stroke-linecap="round"/>
+          <line x1="0" y1="-28" x2="0" y2="28" stroke="#cfd8e3" stroke-width="5" stroke-linecap="round"/>
+        </g>
+        <g id="impeller2" transform="translate(150,200)">
+          <line x1="-24" y1="0" x2="24" y2="0" stroke="#cfd8e3" stroke-width="5" stroke-linecap="round"/>
+          <line x1="0" y1="-24" x2="0" y2="24" stroke="#cfd8e3" stroke-width="5" stroke-linecap="round"/>
+        </g>
+        <text x="150" y="270" font-family="IBM Plex Mono" font-size="10" fill="#8FA7C0" text-anchor="middle">JACKET + AGITATOR</text>
+        <text x="150" y="284" font-family="IBM Plex Mono" font-size="9" fill="#4F6480" text-anchor="middle" id="jacketMode">HEATING 62%</text>
+      </svg>
+      <div style="margin-top:10px;">
+        <div class="probe">pH probe <b id="phProbe">7.00</b></div>
+        <div class="probe">DO probe <b id="doProbe">0%</b></div>
+        <div class="probe">Agitator <b id="agitVal">0 RPM</b></div>
+        <div class="probe">O2 sparge <b id="spargeVal">0%</b></div>
+        <div class="probe">Acid / Base pump <b id="dosingVal">OFF / OFF</b></div>
+      </div>
+    </div>
+
+    <div class="col" style="flex:1.3;">
+      <p class="celltitle">Live Trends</p>
+      <div class="chartwrap">
+        <div class="chartlbl">pH (setpoint 7.00 &plusmn; 0.10)</div>
+        <svg viewBox="0 0 400 70" style="width:100%;"><polyline id="phChart" fill="none" stroke="#E91E8C" stroke-width="2"/><line x1="0" y1="35" x2="400" y2="35" stroke="#1E3348" stroke-dasharray="3 3"/></svg>
+      </div>
+      <div class="chartwrap" style="margin-top:14px;">
+        <div class="chartlbl">Dissolved Oxygen % (setpoint 40%)</div>
+        <svg viewBox="0 0 400 70" style="width:100%;"><polyline id="doChart" fill="none" stroke="#4FD1E8" stroke-width="2"/><line x1="0" y1="35" x2="400" y2="35" stroke="#1E3348" stroke-dasharray="3 3"/></svg>
+      </div>
+      <div class="chartwrap" style="margin-top:14px;">
+        <div class="chartlbl">Vessel / Jacket Temperature &deg;C</div>
+        <svg viewBox="0 0 400 70" style="width:100%;">
+          <polyline id="tempChart" fill="none" stroke="#F5A623" stroke-width="2"/>
+          <polyline id="jacketChart" fill="none" stroke="#4F6480" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="col" style="flex:0.9;">
+      <p class="celltitle">Alarm &amp; Event Log</p>
+      <div class="log" id="logList"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>Simulated HMI &mdash; desktop validation build, not for GMP production use</span>
+    <span>BIOREACTOR-BATCH-CTRL v1.0 &middot; Author: Sipho Lucky Sibanda</span>
+  </div>
+</div>
+
+<script>
+  function fmtClock(sec){
+    var h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = Math.floor(sec%60);
+    function p(n){ return (n<10?'0':'')+n; }
+    return p(h)+':'+p(m)+':'+p(s);
+  }
+
+  var phases = ['CIP','SIP','COOLDOWN','INOCULATION','INCUBATION','HARVEST','COMPLETE'];
+  var phaseLabels = {CIP:'CIP', SIP:'STERILISING (SIP)', COOLDOWN:'COOLING TO INOCULATE',
+    INOCULATION:'INOCULATION', INCUBATION:'INCUBATION ACTIVE', HARVEST:'HARVEST', COMPLETE:'BATCH COMPLETE'};
+
+  var phaseWrap = document.getElementById('phaseWrap');
+  phases.forEach(function(p){
+    var chip = document.createElement('div');
+    chip.className = 'phasechip'; chip.id = 'chip-'+p; chip.textContent = p;
+    phaseWrap.appendChild(chip);
+  });
+
+  var state = {
+    phaseIdx: 1, batchSec: 0, temp: 121.0, jacketTemp: 118.0, ph: 7.0, doPct: 5, agit: 0, sparge: 0,
+    f0: 0, f0target: 15.0, acid: false, base: false, heatPct: 62
+  };
+  var phHist = [], doHist = [], tempHist = [], jacketHist = [];
+  for (var i=0;i<60;i++){ phHist.push(35); doHist.push(60); tempHist.push(35); jacketHist.push(40); }
+
+  var logList = document.getElementById('logList');
+  function pushLog(msg, level){
+    var row = document.createElement('div'); row.className = 'log-row';
+    var t = document.createElement('span'); t.className='log-time'; t.textContent = fmtClock(state.batchSec);
+    var g = document.createElement('span'); g.className = 'log-tag ' + level;
+    var m = document.createElement('span'); m.className='log-msg'; m.textContent = msg;
+    row.appendChild(t); row.appendChild(g); row.appendChild(m);
+    if(logList.firstChild){ logList.insertBefore(row, logList.firstChild); } else { logList.appendChild(row); }
+    while(logList.children.length > 22){ logList.removeChild(logList.lastChild); }
+  }
+  pushLog('SIP started - target F0 15.0 min at 121.1C reference', 'info');
+
+  function toPoints(hist, h){
+    var pts = [];
+    for (var i=0;i<hist.length;i++){
+      var x = (i/(hist.length-1))*400;
+      var y = h - hist[i];
+      pts.push(x.toFixed(1)+','+y.toFixed(1));
+    }
+    return pts.join(' ');
+  }
+
+  var bubbleEls = [];
+  function spawnBubble(){
+    var ns = 'http://www.w3.org/2000/svg';
+    var b = document.createElementNS(ns, 'circle');
+    var x = 100 + Math.random()*100;
+    b.setAttribute('cx', x); b.setAttribute('cy', 235); b.setAttribute('r', 2+Math.random()*2);
+    b.setAttribute('fill', '#bfe9f5'); b.setAttribute('opacity', 0.7);
+    document.getElementById('bubbles').appendChild(b);
+    bubbleEls.push({el:b, y:235, x:x});
+  }
+
+  var impAngle = 0;
+  function render(){
+    var phaseName = phases[state.phaseIdx];
+    document.getElementById('clockval').textContent = fmtClock(state.batchSec);
+    document.getElementById('statusPill').textContent = phaseLabels[phaseName];
+    document.getElementById('tempVal').textContent = state.temp.toFixed(1);
+    document.getElementById('f0Val').textContent = state.f0.toFixed(1);
+    document.getElementById('phProbe').textContent = state.ph.toFixed(2);
+    document.getElementById('doProbe').textContent = Math.round(state.doPct) + '%';
+    document.getElementById('agitVal').textContent = Math.round(state.agit) + ' RPM';
+    document.getElementById('spargeVal').textContent = Math.round(state.sparge) + '%';
+    document.getElementById('dosingVal').textContent = (state.acid?'ON':'off') + ' / ' + (state.base?'ON':'off');
+    document.getElementById('jacketMode').textContent = state.heatPct >= 0
+      ? ('HEATING ' + Math.round(Math.abs(state.heatPct)) + '%')
+      : ('COOLING ' + Math.round(Math.abs(state.heatPct)) + '%');
+    document.getElementById('jacket').setAttribute('stroke', state.heatPct >= 0 ? '#c96a3a' : '#2E7FBF');
+
+    for (var i=0;i<phases.length;i++){
+      var el = document.getElementById('chip-'+phases[i]);
+      if (i < state.phaseIdx) el.className = 'phasechip done';
+      else if (i === state.phaseIdx) el.className = 'phasechip active';
+      else el.className = 'phasechip';
+    }
+
+    impAngle = (impAngle + (state.agit>0 ? 18 : 0)) % 360;
+    document.getElementById('impeller1').setAttribute('transform', 'translate(150,150) rotate('+impAngle+')');
+    document.getElementById('impeller2').setAttribute('transform', 'translate(150,200) rotate('+(-impAngle*1.3)+')');
+
+    phHist.shift(); phHist.push(35 - (state.ph-7.0)*40);
+    doHist.shift(); doHist.push(60 - state.doPct*0.55);
+    tempHist.shift(); tempHist.push(65 - state.temp*0.45);
+    jacketHist.shift(); jacketHist.push(65 - state.jacketTemp*0.45);
+    document.getElementById('phChart').setAttribute('points', toPoints(phHist, 60));
+    document.getElementById('doChart').setAttribute('points', toPoints(doHist, 60));
+    document.getElementById('tempChart').setAttribute('points', toPoints(tempHist, 60));
+    document.getElementById('jacketChart').setAttribute('points', toPoints(jacketHist, 60));
+
+    if (state.sparge > 5 && Math.random() < 0.4) spawnBubble();
+    for (var j=bubbleEls.length-1;j>=0;j--){
+      bubbleEls[j].y -= 3; bubbleEls[j].el.setAttribute('cy', bubbleEls[j].y);
+      var op = parseFloat(bubbleEls[j].el.getAttribute('opacity')) - 0.02;
+      bubbleEls[j].el.setAttribute('opacity', op);
+      if (bubbleEls[j].y < 50 || op <= 0){ bubbleEls[j].el.remove(); bubbleEls.splice(j,1); }
+    }
+  }
+  render();
+
+  // ---- Scripted demo: finish SIP -> cooldown -> inoculation -> incubation with DO/pH activity ----
+  var script = [
+    { t: 3000,  fn: function(){ state.f0 = 6.0; pushLog('F0 accumulating - vessel holding at 121C', 'info'); } },
+    { t: 7000,  fn: function(){ state.f0 = 15.2; state.phaseIdx = 2; state.temp=110; state.heatPct=-100;
+                  pushLog('SIP target F0 reached - cooling to inoculation temperature', 'ok'); } },
+    { t: 11000, fn: function(){ state.temp = 37.2; state.jacketTemp = 36.8; state.heatPct = 4;
+                  pushLog('Vessel stable at cooldown temperature', 'ok'); } },
+    { t: 13500, fn: function(){ state.phaseIdx = 3; pushLog('Cooldown confirmed - proceeding to inoculation', 'ok'); } },
+    { t: 17000, fn: function(){ state.phaseIdx = 4; state.doPct = 55; state.agit = 180;
+                  pushLog('Inoculation complete - incubation started', 'ok'); } },
+    { t: 20000, fn: function(){ state.doPct = 28; state.agit = 340; pushLog('DO dropping - agitation increasing', 'warn'); } },
+    { t: 23000, fn: function(){ state.doPct = 22; state.agit = 400; state.sparge = 35;
+                  pushLog('Agitation at maximum - oxygen sparge engaging', 'warn'); } },
+    { t: 27000, fn: function(){ state.doPct = 39; state.sparge = 15; pushLog('DO recovering toward setpoint', 'ok'); } },
+    { t: 30000, fn: function(){ state.ph = 6.85; state.acid = false; state.base = true; pushLog('pH below deadband - base pump dosing', 'info'); } },
+    { t: 33000, fn: function(){ state.ph = 7.02; state.base = false; pushLog('pH restored within deadband', 'ok'); } }
+  ];
+  var cycleLength = 36000;
+  function runScript(){
+    for(var i=0;i<script.length;i++){
+      (function(step){ setTimeout(function(){ step.fn(); }, step.t); })(script[i]);
+    }
+  }
+  runScript();
+  setInterval(runScript, cycleLength);
+
+  setInterval(function(){
+    state.batchSec += 1;
+    state.ph += (Math.random()-0.5)*0.01;
+    state.doPct = Math.max(0, Math.min(100, state.doPct + (Math.random()-0.5)*1.2));
+    state.jacketTemp += (Math.random()-0.5)*0.2;
+    render();
+  }, 1000);
+</script>
+</body>
+</html>
